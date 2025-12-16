@@ -427,16 +427,16 @@ app.post('/mcp/:server/:tool', async (req, res) => {
 // INICIAR SERVIDOR
 // ═══════════════════════════════════════════════════════════════
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('🦎 CAMALEÃO MCP GATEWAY');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
-  console.log(`🚀 Servidor rodando em: http://localhost:${PORT}`);
-  console.log(`📊 Dashboard:          http://localhost:${PORT}`);
-  console.log(`🔍 Health check:       http://localhost:${PORT}/health`);
-  console.log(`📚 List MCPs:          http://localhost:${PORT}/mcp/list`);
+  console.log(`🚀 Servidor rodando em: http://0.0.0.0:${PORT}`);
+  console.log(`📊 Dashboard:          http://0.0.0.0:${PORT}`);
+  console.log(`🔍 Health check:       http://0.0.0.0:${PORT}/health`);
+  console.log(`📚 List MCPs:          http://0.0.0.0:${PORT}/mcp/list`);
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
