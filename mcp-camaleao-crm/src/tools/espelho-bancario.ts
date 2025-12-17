@@ -191,22 +191,19 @@ async function executarConsulta(
   const totalPago = pagamentos.reduce((s, e) => s + e.value, 0);
   const saldo = totalRecebido + totalPago;
 
-  // Formatar mensagem (Foco no detalhamento por via)
-  let msg = `📊 Recebimentos de ${periodoLabel}:\n\n`;
-  
+  // Formatar mensagem - APENAS recebimentos por canal
+  let msg = `💰 Recebimentos de ${periodoLabel}:\n\n`;
+
   if (resumo.length > 0) {
     for (const item of resumo) {
-      msg += `✅ ${item.via}: R$ ${formatarDinheiro(item.total)}\n`;
+      msg += `${item.via} R$ ${formatarDinheiro(item.total)}\n`;
     }
-    msg += `\n💰 TOTAL RECEBIDO: R$ ${formatarDinheiro(totalRecebido)}`;
+    msg += `\n✅ TOTAL R$ ${formatarDinheiro(totalRecebido)}`;
   } else {
     msg += `Nenhum recebimento encontrado.`;
   }
 
-  if (totalPago < 0) {
-    msg += `\n\n💸 Pagamentos (Saídas): R$ ${formatarDinheiro(Math.abs(totalPago))}`;
-    msg += `\n📉 Saldo Líquido (Recebido - Pago): R$ ${formatarDinheiro(saldo)}`;
-  }
+  // Pagamentos e saldo disponíveis no JSON de retorno, mas NÃO na mensagem principal
 
   // Preparar extrato simplificado
   const extrato: Transacao[] = filtered.map(e => ({

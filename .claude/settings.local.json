@@ -47,7 +47,9 @@
       "Bash(💸 Pagamentos: R$ 210,00)",
       "Bash(💰 Saldo líquido: R$ 240,00\"\n\nDEPOIS:\n\"💰 Recebimentos de hoje:)",
       "Bash(Cora R$ 450,00)",
-      "Bash(✅ TOTAL R$ 450,00\"\n\n🦎 Generated with Claude Code\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(✅ TOTAL R$ 450,00\"\n\n🦎 Generated with Claude Code\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git fetch:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: remover pagamentos e saldo da mensagem principal do espelho_bancario\n\nPROBLEMA:\n- Mesmo após refactoring, a mensagem ainda mostrava pagamentos e saldo\n- Usuário quer ver APENAS os recebimentos por canal\n\nSOLUÇÃO:\n- Remover completamente as linhas que adicionam pagamentos e saldo na msg\n- Simplificar formato: \"Cora R$ 450,00\" em vez de \"✅ Cora: R$ 450,00\"\n- Mudar de \"TOTAL RECEBIDO\" para apenas \"TOTAL\"\n- Dados de pagamento/saldo continuam no JSON, mas não na mensagem\n\nFORMATO FINAL:\n💰 Recebimentos de hoje:\n\nCora R$ 450,00\nDinheiro R$ 100,00\n\n✅ TOTAL R$ 550,00\n\n🦎 Generated with Claude Code\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ]
   }
 }
