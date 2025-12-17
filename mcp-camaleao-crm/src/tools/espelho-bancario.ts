@@ -187,7 +187,9 @@ async function executarConsulta(
   const saldo = totalRecebido + totalPago;
 
   // Formatar mensagem - APENAS recebimentos por canal
-  let msg = `💰 Recebimentos de ${periodoLabel}:\n\n`;
+  // Adicionar data no formato DD/MM após o período
+  const dataFormatada = isoParaBR(dataInicio);
+  let msg = `💰 Recebimentos de ${periodoLabel} (${dataFormatada}):\n\n`;
 
   if (resumo.length > 0) {
     for (const item of resumo) {
