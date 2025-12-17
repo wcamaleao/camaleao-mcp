@@ -536,7 +536,10 @@ app.post('/mcp/crm', async (req, res) => {
     let result;
     switch (_endpoint) {
       case 'espelho_bancario':
-        result = await espelhoBancario(crmClient, args);
+        const espelhoResult = await espelhoBancario(crmClient, args);
+        // Retornar APENAS a mensagem formatada, sem outros campos
+        // Isso impede o agente de interpretar campos extras
+        result = espelhoResult.mensagem;
         break;
       case 'monitorar_pedidos_parados':
         result = await monitorarPedidosParados(crmClient);
