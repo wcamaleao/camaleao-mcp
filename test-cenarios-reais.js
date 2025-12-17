@@ -319,7 +319,6 @@ async function espelhoBancario(client, args) {
         extrato: []
       };
   }
-  }
 
   let allEntries = [];
   let currentPage = 1;
