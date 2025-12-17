@@ -521,17 +521,25 @@ app.post('/mcp/crm/consultar_pagamentos', async (req, res) => {
 // Unified CRM Router - roteamento baseado em _endpoint no body
 app.post('/mcp/crm', async (req, res) => {
   try {
+    const timestamp = new Date().toISOString();
     const { _endpoint, ...args } = req.body;
 
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(`[${timestamp}] 📨 REQUISIÇÃO RECEBIDA`);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Endpoint:', _endpoint);
+    console.log('Argumentos:', JSON.stringify(args, null, 2));
+    console.log('');
+
     if (!_endpoint) {
+      console.log('❌ ERRO: _endpoint ausente');
       return res.status(400).json({
         success: false,
         error: 'Campo "_endpoint" é obrigatório no body',
         timestamp: new Date().toISOString(),
       });
     }
-
-    console.log(`[GATEWAY] Unified Router -> ${_endpoint}:`, args);
 
     let result;
     switch (_endpoint) {
@@ -558,13 +566,32 @@ app.post('/mcp/crm', async (req, res) => {
         });
     }
 
-    res.json({
+    const response = {
       success: true,
       data: result,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    console.log('');
+    console.log('✅ RESPOSTA ENVIADA');
+    console.log('Tipo do resultado:', typeof result);
+    console.log('Tamanho:', typeof result === 'string' ? `${result.length} caracteres` : 'objeto');
+    if (typeof result === 'string') {
+      console.log('Preview:', result.substring(0, 100) + '...');
+    } else {
+      console.log('Preview:', JSON.stringify(result, null, 2).substring(0, 200) + '...');
+    }
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('');
+
+    res.json(response);
   } catch (error: any) {
-    console.error('[GATEWAY] Erro no Unified Router:', error);
+    console.log('');
+    console.log('❌ ERRO NO PROCESSAMENTO');
+    console.error('Detalhes:', error);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('');
+
     res.status(500).json({
       success: false,
       error: error.message,
