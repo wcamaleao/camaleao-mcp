@@ -1,78 +1,101 @@
-// ═══════════════════════════════════════════════════════════════
-// TOOL: ESPELHO BANCÁRIO
-// ═══════════════════════════════════════════════════════════════
 
-import type { GraphQLClient } from '../lib/graphql-client.js';
-import { parsePeriodo, normalizaData, hojeSP, isoParaBR } from '../lib/date-parser.js';
-import { formatarDinheiro, obterNomeVia } from '../lib/formatters.js';
-import type { EspelhoBancarioResult, BankMirrorEntry, PaginatorInfo, Transacao } from '../types/index.js';
+const https = require('https');
 
-const TIMEOUT_MS = 45000;
-const MAX_PAGINAS = 50;
+// MOCK CLIENT
+class MockGraphQLClient {
+  constructor(url, email, password) {
+    this.url = url;
+    this.email = email;
+    this.password = password;
+    this.cookies = '';
+  }
 
-interface EntriesBankMirrorResponse {
-  entriesBankMirror: {
-    data: BankMirrorEntry[];
-    paginatorInfo: PaginatorInfo;
-  };
+  async ensureAuthenticated() {
+    console.log('[MOCK] Authenticating...');
+    const query = `mutation { login(email: "${this.email}", password: "${this.password}", remember: false) { id } }`;
+    await this.request(query);
+    console.log('[MOCK] Authenticated.');
+  }
+
+  request(query) {
+    return new Promise((resolve, reject) => {
+      const postData = JSON.stringify({ query });
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          ...(this.cookies && { 'Cookie': this.cookies })
+        }
+      };
+
+      const req = https.request(this.url, options, (res) => {
+        let data = '';
+        if (res.headers['set-cookie']) {
+            const cookies = res.headers['set-cookie'];
+            this.cookies = Array.isArray(cookies) ? cookies.join('; ') : cookies;
+        }
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.errors) reject(new Error(json.errors[0].message));
+            resolve(json.data);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+      req.on('error', reject);
+      req.write(postData);
+      req.end();
+    });
+  }
 }
 
-export async function espelhoBancario(
-  client: GraphQLClient,
-  args: { data?: string; data_inicio?: string; data_fim?: string; periodo?: string }
-): Promise<EspelhoBancarioResult> {
+// HELPERS
+function hojeSP() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
+function normalizaData(raw) {
+  const s = String(raw || '').trim();
+  if (!s || ['hoje','hj'].includes(s.toLowerCase())) return hojeSP();
+  return s; // Simplified for test
+}
+
+function isoParaBR(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function formatarDinheiro(val) {
+  return val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function obterNomeVia(id) {
+    const map = {
+        '4': 'Dinheiro',
+        '6': 'Cora (PIX)',
+        '8': 'Mercado Pago'
+    };
+    return map[id] || `Via ${id}`;
+}
+
+// TOOL LOGIC (COPIED FROM espelho-bancario.ts)
+const TIMEOUT_MS = 45000;
+const MAX_PAGINAS = 20;
+
+async function espelhoBancario(client, args) {
   await client.ensureAuthenticated();
 
-  // Determinar período
-  let dataInicio: string;
-  let dataFim: string;
-  let periodoLabel: string;
-
-  const periodoDetectado = parsePeriodo(
-    args.periodo || args.data || ''
-  );
-
-  if (periodoDetectado) {
-    dataInicio = periodoDetectado.data_inicio;
-    dataFim = periodoDetectado.data_fim;
-    periodoLabel = periodoDetectado.label;
-  } else if (args.data_inicio && args.data_fim) {
-    dataInicio = normalizaData(args.data_inicio);
-    dataFim = normalizaData(args.data_fim);
-    periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
-  } else if (args.data) {
-    dataInicio = normalizaData(args.data);
-    dataFim = dataInicio;
-    periodoLabel = isoParaBR(dataInicio);
-  } else {
-    dataInicio = hojeSP();
-    dataFim = dataInicio;
-    periodoLabel = 'hoje';
-  }
+  let dataInicio = normalizaData(args.data);
+  let dataFim = dataInicio;
+  let periodoLabel = isoParaBR(dataInicio);
 
   console.log(`[ESPELHO] Período: ${periodoLabel} (${dataInicio} a ${dataFim})`);
 
-  // Executar com timeout
-  const resultado = await Promise.race([
-    executarConsulta(client, dataInicio, dataFim, periodoLabel),
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error('Timeout: consulta demorou mais de 45s')),
-        TIMEOUT_MS
-      )
-    ),
-  ]);
-
-  return resultado;
-}
-
-async function executarConsulta(
-  client: GraphQLClient,
-  dataInicio: string,
-  dataFim: string,
-  periodoLabel: string
-): Promise<EspelhoBancarioResult> {
-  let allEntries: BankMirrorEntry[] = [];
+  let allEntries = [];
   let currentPage = 1;
   let totalPages = 1;
   const perPage = 100;
@@ -99,8 +122,7 @@ async function executarConsulta(
       }
     `;
 
-    const result = await client.request<EntriesBankMirrorResponse>(query);
-
+    const result = await client.request(query);
     const data = result.entriesBankMirror.data;
     const paginator = result.entriesBankMirror.paginatorInfo;
 
@@ -112,7 +134,6 @@ async function executarConsulta(
     if (data.length === 0) break;
 
     // OTIMIZAÇÃO: Parar se encontrarmos datas anteriores ao inicio do periodo
-    // Assumindo que a API retorna do mais recente para o mais antigo
     const lastEntry = data[data.length - 1];
     if (lastEntry && lastEntry.date) {
       const lastDate = lastEntry.date.split(' ')[0];
@@ -127,7 +148,6 @@ async function executarConsulta(
 
   console.log(`[ESPELHO] Total carregado: ${allEntries.length}`);
 
-  // Filtrar pelo período
   const filtered = allEntries
     .filter((e) => {
       const dataReg = e.date.split(' ')[0];
@@ -142,23 +162,13 @@ async function executarConsulta(
   console.log(`[ESPELHO] Filtrados: ${filtered.length}`);
 
   if (filtered.length === 0) {
-    return {
-      data_inicio: dataInicio,
-      data_fim: dataFim,
-      periodo_label: periodoLabel,
-      mensagem: `Não houve recebimentos em ${periodoLabel}.`,
-      total_recebido: 0,
-      total_pago: 0,
-      saldo_periodo: 0,
-      recebimentos_por_via: [],
-    };
+    return { mensagem: `Não houve recebimentos em ${periodoLabel}.` };
   }
 
   const recebimentos = filtered.filter((e) => e.value > 0);
   const pagamentos = filtered.filter((e) => e.value < 0);
 
-  // Agrupar por via
-  const porVia: Record<string, number[]> = {};
+  const porVia = {};
   for (const e of recebimentos) {
     if (!porVia[e.via]) porVia[e.via] = [];
     porVia[e.via].push(e.value);
@@ -194,7 +204,7 @@ async function executarConsulta(
   }
 
   // Preparar extrato simplificado
-  const extrato: Transacao[] = filtered.map(e => ({
+  const extrato = filtered.map(e => ({
     data: e.date,
     descricao: e.description,
     valor: e.value,
@@ -203,9 +213,6 @@ async function executarConsulta(
   }));
 
   return {
-    data_inicio: dataInicio,
-    data_fim: dataFim,
-    periodo_label: periodoLabel,
     mensagem: msg,
     total_recebido: totalRecebido,
     total_pago: Math.abs(totalPago),
@@ -214,3 +221,17 @@ async function executarConsulta(
     extrato: extrato
   };
 }
+
+// RUN TEST
+(async () => {
+    const client = new MockGraphQLClient(
+        'https://web-api.camaleaocamisas.com.br/graphql-api',
+        'api-gerente@email.com',
+        'PPTDYBYqcmE7wg'
+    );
+    
+    // Test for 16/12/2025 (same as debug script)
+    const result = await espelhoBancario(client, { data: '2025-12-16' });
+    console.log('\nRESULTADO FINAL:');
+    console.log(JSON.stringify(result, null, 2));
+})();

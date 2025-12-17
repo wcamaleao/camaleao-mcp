@@ -20,6 +20,14 @@ export interface RecebimentoPorVia {
   quantidade: number;
 }
 
+export interface Transacao {
+  data: string;
+  descricao: string;
+  valor: number;
+  via: string;
+  tipo: 'ENTRADA' | 'SAIDA';
+}
+
 export interface EspelhoBancarioResult {
   data_inicio: string;
   data_fim: string;
@@ -29,6 +37,7 @@ export interface EspelhoBancarioResult {
   total_pago: number;
   saldo_periodo: number;
   recebimentos_por_via: RecebimentoPorVia[];
+  extrato?: Transacao[];
 }
 
 export interface PedidoParado {
