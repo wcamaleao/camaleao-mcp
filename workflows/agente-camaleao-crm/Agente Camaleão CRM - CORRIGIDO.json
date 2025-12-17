@@ -1,0 +1,93 @@
+{
+  "name": "Agente Camaleão CRM - CORRIGIDO - 17/12 17:40",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-execute",
+      "name": "▶️ Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agente-camaleao-crm",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "🎯 Entrada Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 500],
+      "webhookId": "agente-camaleao-crm"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair pergunta do input\nconst pergunta = ($input.item.json.pergunta || $input.item.json.body?.pergunta || $input.item.json.query?.pergunta || 'hoje').toLowerCase();\n\n// Detectar período\nlet periodo = 'hoje';\n\nif (pergunta.includes('ontem')) {\n  periodo = 'ontem';\n} else if (pergunta.includes('anteontem')) {\n  periodo = 'anteontem';\n} else if (pergunta.includes('semana')) {\n  periodo = 'esta semana';\n} else if (pergunta.includes('mês') || pergunta.includes('mes')) {\n  periodo = 'este mês';\n}\n\nconsole.log('[CODE] Pergunta:', pergunta);\nconsole.log('[CODE] Período detectado:', periodo);\n\n// Chamar Gateway usando $http do n8n\nconst response = await $http.request({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-e6b9c9c7e8ef5dbdfc8e80331eac4c0c254fbf6ccd7065c4af3af05a8bdeed60'\n  },\n  body: {\n    _endpoint: 'espelho_bancario',\n    periodo: periodo\n  },\n  json: true\n});\n\nconsole.log('[CODE] Resposta do Gateway:', response);\n\n// Retornar mensagem formatada\nreturn {\n  json: {\n    resposta: response.data,\n    periodo: periodo,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "consultar-gateway",
+      "name": "🔍 Consultar Gateway",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "responder-webhook",
+      "name": "📤 Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 400]
+    }
+  ],
+  "connections": {
+    "▶️ Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "🔍 Consultar Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Entrada Webhook": {
+      "main": [
+        [
+          {
+            "node": "🔍 Consultar Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Consultar Gateway": {
+      "main": [
+        [
+          {
+            "node": "📤 Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-17T20:40:00.000Z",
+  "versionId": "1"
+}
