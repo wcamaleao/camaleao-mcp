@@ -53,10 +53,7 @@ export async function espelhoBancario(
         periodo_label: 'erro',
         mensagem: `⚠️ Não entendi o período "${args.periodo}".\n\nTente usar:\n- "hoje", "ontem", "anteontem"\n- "semana passada", "esta semana"\n- "mês passado", "este mês"\n- Ou uma data: "15/12/2025"`,
         total_recebido: 0,
-        total_pago: 0,
-        saldo_periodo: 0,
-        recebimentos_por_via: [],
-        extrato: []
+        recebimentos_por_via: []
       };
     }
 
@@ -163,8 +160,6 @@ async function executarConsulta(
       periodo_label: periodoLabel,
       mensagem: `Não houve recebimentos em ${periodoLabel}.`,
       total_recebido: 0,
-      total_pago: 0,
-      saldo_periodo: 0,
       recebimentos_por_via: [],
     };
   }
@@ -220,9 +215,6 @@ async function executarConsulta(
     periodo_label: periodoLabel,
     mensagem: msg,
     total_recebido: totalRecebido,
-    total_pago: Math.abs(totalPago),
-    saldo_periodo: saldo,
-    recebimentos_por_via: resumo,
-    extrato: extrato
+    recebimentos_por_via: resumo
   };
 }

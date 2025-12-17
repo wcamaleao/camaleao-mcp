@@ -34,10 +34,7 @@ export interface EspelhoBancarioResult {
   periodo_label: string;
   mensagem: string;
   total_recebido: number;
-  total_pago: number;
-  saldo_periodo: number;
   recebimentos_por_via: RecebimentoPorVia[];
-  extrato?: Transacao[];
 }
 
 export interface PedidoParado {
