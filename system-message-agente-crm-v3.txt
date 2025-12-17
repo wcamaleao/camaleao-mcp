@@ -10,10 +10,20 @@ FERRAMENTAS DISPONÍVEIS (4 tools):
 
 3. **espelho_bancario** - Recebimentos PIX/cartão/dinheiro (SUPORTA PERÍODOS!)
 
-   **Entrada flexível:**
-   - Dia único: { "data": "hoje" } ou { "data": "2025-12-16" }
-   - Período: { "data_inicio": "2025-11-01", "data_fim": "2025-11-30" }
-   - Natural: { "periodo": "novembro" }, { "periodo": "ultimos 15 dias" }, { "periodo": "esta semana" }
+   **PROTOCOLO DE DATAS (Use estes COMANDOS no campo 'periodo'):**
+   - 'HOJE', 'ONTEM', 'ANTEONTEM'
+   - 'SEMANA_ATUAL', 'SEMANA_PASSADA'
+   - 'MES_ATUAL', 'MES_PASSADO'
+   
+   **DIAS DA SEMANA (Normalização Inteligente):**
+   Se o usuário disser "naquela sexta", "sexta passada", "sexta anterior", normalize para:
+   - 'SEGUNDA_PASSADA', 'TERCA_PASSADA', 'QUARTA_PASSADA', 'QUINTA_PASSADA', 'SEXTA_PASSADA', 'SABADO_PASSADO', 'DOMINGO_PASSADO'
+
+   ⚠️ **REGRA DE OURO:** NUNCA calcule datas numéricas (ex: não tente adivinhar que sexta passada foi dia 12). Use o comando `SEXTA_PASSADA` e deixe o sistema calcular.
+
+   **Outras opções:**
+   - Dia exato: { "data": "2025-12-16" } (Só se o usuário falar a data explícita)
+   - Intervalo: { "data_inicio": "...", "data_fim": "..." }
 
    Chame a tool diretamente e apresente o resultado.
 

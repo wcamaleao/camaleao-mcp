@@ -45,6 +45,21 @@ export async function espelhoBancario(
     dataFim = dataInicio;
     periodoLabel = isoParaBR(dataInicio);
   } else {
+    // Se o usuário tentou passar um período mas não entendemos, ERRO (não inventar "hoje")
+    if (args.periodo) {
+      return {
+        data_inicio: '',
+        data_fim: '',
+        periodo_label: 'erro',
+        mensagem: `⚠️ Não entendi o período "${args.periodo}".\n\nTente usar:\n- "hoje", "ontem", "anteontem"\n- "semana passada", "esta semana"\n- "mês passado", "este mês"\n- Ou uma data: "15/12/2025"`,
+        total_recebido: 0,
+        total_pago: 0,
+        saldo_periodo: 0,
+        recebimentos_por_via: [],
+        extrato: []
+      };
+    }
+
     dataInicio = hojeSP();
     dataFim = dataInicio;
     periodoLabel = 'hoje';

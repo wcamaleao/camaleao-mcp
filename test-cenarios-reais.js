@@ -66,10 +66,211 @@ class RealGraphQLClient {
 function hojeSP() { 
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 }
+
+// ----------------------------------------------------------------------------
+// PARSER DE PERÍODOS (Cópia do date-parser.ts atualizado)
+// ----------------------------------------------------------------------------
+
+// Algoritmo de Levenshtein para calcular distância entre strings
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substituição
+          Math.min(
+            matrix[i][j - 1] + 1,   // inserção
+            matrix[i - 1][j] + 1    // remoção
+          )
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+// Verifica se a palavra alvo está contida no input com tolerância a erros
+function fuzzyMatch(input, target, maxDistance = 1) {
+  const words = input.split(/\s+/);
+  // Verifica se alguma palavra do input é próxima o suficiente do target
+  return words.some(word => {
+    // Se for muito curta, exige exatidão
+    if (target.length <= 3) return word === target;
+    return levenshtein(word, target) <= maxDistance;
+  });
+}
+
+function parsePeriodo(input) {
+    const hoje = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    const s = (input || '').toLowerCase().trim();
+
+    const formatISO = (d) => {
+        const ano = d.getFullYear();
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    };
+
+    const subDias = (d, n) => {
+        const nova = new Date(d);
+        nova.setDate(nova.getDate() - n);
+        return nova;
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // 1. COMANDOS ESTRUTURADOS (PRIORIDADE MÁXIMA)
+    // ═══════════════════════════════════════════════════════════════
+    
+    if (s === 'hoje' || s === 'today') {
+        return { data_inicio: formatISO(hoje), data_fim: formatISO(hoje), label: 'hoje' };
+    }
+
+    if (s === 'ontem' || s === 'yesterday') {
+        const ontem = subDias(hoje, 1);
+        return { data_inicio: formatISO(ontem), data_fim: formatISO(ontem), label: 'ontem' };
+    }
+
+    if (s === 'anteontem') {
+        const anteontem = subDias(hoje, 2);
+        return { data_inicio: formatISO(anteontem), data_fim: formatISO(anteontem), label: 'anteontem' };
+    }
+
+    if (s === 'semana_atual' || s === 'esta_semana') {
+        const diaSemana = hoje.getDay();
+        const diasDesdeSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+        const segunda = subDias(hoje, diasDesdeSegunda);
+        return { data_inicio: formatISO(segunda), data_fim: formatISO(hoje), label: 'esta semana' };
+    }
+
+    if (s === 'semana_passada') {
+        const diaSemana = hoje.getDay();
+        const diasDesdeSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+        const segundaPassada = subDias(hoje, diasDesdeSegunda + 7);
+        const domingoPassado = subDias(hoje, diasDesdeSegunda + 1);
+        return { data_inicio: formatISO(segundaPassada), data_fim: formatISO(domingoPassado), label: 'semana passada' };
+    }
+
+    if (s === 'mes_atual') {
+        const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        return { data_inicio: formatISO(primeiroDia), data_fim: formatISO(hoje), label: 'este mês' };
+    }
+
+    if (s === 'mes_passado') {
+        const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+        const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+        return { data_inicio: formatISO(primeiroDia), data_fim: formatISO(ultimoDia), label: 'mês passado' };
+    }
+
+    // COMANDOS DINÂMICOS DE DIAS DA SEMANA (Ex: SEGUNDA_PASSADA, SEXTA_PASSADA)
+    const matchDiaPassado = s.match(/^(domingo|segunda|terca|quarta|quinta|sexta|sabado)_passad[oa]$/);
+    if (matchDiaPassado) {
+        const mapDias = {
+        'domingo': 0, 'segunda': 1, 'terca': 2, 'quarta': 3, 
+        'quinta': 4, 'sexta': 5, 'sabado': 6
+        };
+        const nomeDia = matchDiaPassado[1];
+        const targetDia = mapDias[nomeDia];
+        
+        const hojeDia = hoje.getDay();
+        let diasParaSubtrair = (hojeDia - targetDia + 7) % 7;
+        if (diasParaSubtrair === 0) diasParaSubtrair = 7;
+        
+        const dataAlvo = subDias(hoje, diasParaSubtrair);
+        return {
+        data_inicio: formatISO(dataAlvo),
+        data_fim: formatISO(dataAlvo),
+        label: `${nomeDia} passada`
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 2. PARSER DE LINGUAGEM NATURAL (COM FUZZY MATCH)
+    // ═══════════════════════════════════════════════════════════════
+
+    // "hoje" (fuzzy)
+    if (fuzzyMatch(s, 'hoje', 1) || s === 'hj') {
+        return { data_inicio: formatISO(hoje), data_fim: formatISO(hoje), label: 'hoje' };
+    }
+
+    // "anteontem" (fuzzy)
+    if (fuzzyMatch(s, 'anteontem', 2) || s.includes('ante ontem')) {
+        const anteontem = subDias(hoje, 2);
+        return { data_inicio: formatISO(anteontem), data_fim: formatISO(anteontem), label: 'anteontem' };
+    }
+
+    // "ontem" (fuzzy)
+    if (fuzzyMatch(s, 'ontem', 1)) {
+        const ontem = subDias(hoje, 1);
+        return { data_inicio: formatISO(ontem), data_fim: formatISO(ontem), label: 'ontem' };
+    }
+
+    // "Dia da semana passado" (ex: sexta passada)
+    const diasSemana = [
+        { nome: 'domingo', id: 0 },
+        { nome: 'segunda', id: 1 },
+        { nome: 'terça', id: 2 },
+        { nome: 'quarta', id: 3 },
+        { nome: 'quinta', id: 4 },
+        { nome: 'sexta', id: 5 },
+        { nome: 'sábado', id: 6 },
+    ];
+
+    const isPassado = s.includes('passada') || s.includes('passado') || s.includes('anterior') ||
+                      fuzzyMatch(s, 'passada', 2) || fuzzyMatch(s, 'passado', 2);
+
+    for (const dia of diasSemana) {
+        // Aceita até 2 erros de digitação para dias da semana (ex: "sesta", "terca")
+        if (fuzzyMatch(s, dia.nome, 2) && isPassado) {
+            const hojeDia = hoje.getDay();
+            const targetDia = dia.id;
+            let diasParaSubtrair = (hojeDia - targetDia + 7) % 7;
+            if (diasParaSubtrair === 0) diasParaSubtrair = 7;
+            
+            const dataAlvo = subDias(hoje, diasParaSubtrair);
+            return {
+                data_inicio: formatISO(dataAlvo),
+                data_fim: formatISO(dataAlvo),
+                label: `${dia.nome} passada`,
+            };
+        }
+    }
+
+    return null;
+}
+
 function normalizaData(raw) { 
     const s = String(raw || '').trim();
+    
+    // Tenta usar o parser inteligente primeiro
+    const parsed = parsePeriodo(s);
+    if (parsed) return parsed.data_inicio;
+
     if (!s || ['hoje','hj'].includes(s.toLowerCase())) return hojeSP();
-    return s;
+    
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    
+    // DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+        const [dd, mm, yyyy] = s.split('/');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // DD-MM (Assume ano atual)
+    if (/^\d{2}-\d{2}$/.test(s)) {
+        const [dd, mm] = s.split('-');
+        const ano = new Date().getFullYear();
+        return `${ano}-${mm}-${dd}`;
+    }
+
+    // Se chegou aqui, a data é inválida. NÃO retorne hoje.
+    throw new Error(`Data inválida: "${raw}"`);
 }
 function isoParaBR(iso) { return iso.split('-').reverse().join('/'); }
 function formatarDinheiro(val) { return val.toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
@@ -83,14 +284,41 @@ async function espelhoBancario(client, args) {
   
   let dataInicio, dataFim, periodoLabel;
 
-  if (args.data_inicio && args.data_fim) {
+  // Tenta detectar período natural primeiro (igual à tool real)
+  const periodoDetectado = parsePeriodo(args.periodo || args.data || '');
+
+  if (periodoDetectado) {
+      dataInicio = periodoDetectado.data_inicio;
+      dataFim = periodoDetectado.data_fim;
+      periodoLabel = periodoDetectado.label;
+  } else if (args.data_inicio && args.data_fim) {
       dataInicio = args.data_inicio;
       dataFim = args.data_fim;
       periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
-  } else {
-      dataInicio = normalizaData(args.data);
-      dataFim = dataInicio;
-      periodoLabel = isoParaBR(dataInicio);
+  } else if (args.data) {
+      try {
+        dataInicio = normalizaData(args.data);
+        dataFim = dataInicio;
+        periodoLabel = isoParaBR(dataInicio);
+      } catch (e) {
+        // Se falhar ao normalizar data explícita, cai no erro abaixo
+      }
+  } 
+  
+  // Se não conseguiu determinar dataInicio até aqui, é erro
+  if (!dataInicio) {
+      return {
+        data_inicio: '',
+        data_fim: '',
+        periodo_label: 'erro',
+        mensagem: `⚠️ Não entendi o período "${args.periodo || args.data}".\n\nTente usar:\n- "hoje", "ontem", "anteontem"\n- "semana passada", "esta semana"\n- "mês passado", "este mês"\n- Ou uma data: "15/12/2025"`,
+        total_recebido: 0,
+        total_pago: 0,
+        saldo_periodo: 0,
+        recebimentos_por_via: [],
+        extrato: []
+      };
+  }
   }
 
   let allEntries = [];
@@ -263,19 +491,31 @@ Hoje o investimento foi de **R$ 120,00**, gerando **15 conversas** novas (Custo 
   console.log("\n🏁 TESTES REAIS CONCLUÍDOS.");
 }
 
-// HELPERS DE DATA PARA TESTE
+// HELPERS DE DATA PARA TESTE (Fuso Horário SP Garantido)
+function getHojeSP_Date() {
+    return new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+}
+
 function getOntem() {
-    const d = new Date();
+    const d = getHojeSP_Date();
     d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
 }
 
 function getInicioSemana() {
-    const d = new Date();
+    const d = getHojeSP_Date();
     const day = d.getDay(); // 0 (Dom) a 6 (Sab)
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajustar para Segunda-feira
-    const monday = new Date(d.setDate(diff));
-    return monday.toISOString().split('T')[0];
+    const monday = new Date(d);
+    monday.setDate(diff);
+    
+    const ano = monday.getFullYear();
+    const mes = String(monday.getMonth() + 1).padStart(2, '0');
+    const dia = String(monday.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
 }
 
 async function rodarCenariosReais() {
@@ -395,6 +635,42 @@ Hoje o investimento foi de **R$ 120,00**, gerando **15 conversas** novas (Custo 
   console.log("   ---------------------------------------------------");
   console.log(resMes.mensagem);
   console.log("   ---------------------------------------------------");
+
+  // --------------------------------------------------------------------------
+  // CENÁRIO 7: Teste de Data Incompleta ("15/12") - O BUG DO USUÁRIO
+  // --------------------------------------------------------------------------
+  console.log(`\n🧪 CENÁRIO 7: Teste de Data Incompleta ("15/12")`);
+  console.log("   [USUÁRIO] 'e dia 15/12?' (Simulando erro da IA)");
+
+  const resBug = await espelhoBancario(client, { data: '15/12' });
+
+  console.log("\n   🤖 RESPOSTA DA IA:");
+  console.log("   ---------------------------------------------------");
+  console.log(resBug.mensagem);
+  console.log("   ---------------------------------------------------");
+
+  // --------------------------------------------------------------------------
+  // CENÁRIO 8: Testes de Linguagem Natural e Typos
+  // --------------------------------------------------------------------------
+  console.log(`\n🧪 CENÁRIO 8: Testes de Linguagem Natural e Typos`);
+  
+  const testes = [
+      { input: 'anteontem', desc: 'Anteontem' },
+      { input: 'ante ontem', desc: 'Ante ontem (separado)' },
+      { input: 'ontm', desc: 'Ontem (typo)' },
+      { input: 'sexta passada', desc: 'Sexta Passada' },
+      { input: 'sesta passada', desc: 'Sesta Passada (typo)' },
+      { input: 'segunda passada', desc: 'Segunda Passada' },
+      { input: 'naquela terca', desc: 'Naquela Terca (typo + contexto)' }
+  ];
+
+  for (const t of testes) {
+      console.log(`   [USUÁRIO] '${t.desc}' (input: "${t.input}")`);
+      const res = await espelhoBancario(client, { periodo: t.input });
+      console.log(`   🤖 RESPOSTA: ${res.mensagem.split('\n')[0]} (Período: ${res.periodo_label})`);
+      console.log(`      Data Buscada: ${res.data_inicio}`);
+      console.log("   ---------------------------------------------------");
+  }
 
   // DEBUG DETALHADO DA SEMANA
   console.log("\n🔍 DEBUG: DETALHAMENTO DA SEMANA POR VIA");
