@@ -1,5 +1,5 @@
 {
-  "name": "Agente Camaleão CRM - LIMPO MCP ONLY - 17/12 12:00",
+  "name": "Agente Camaleão CRM - TODAS AS 4 TOOLS VIA MCP - 17/12 15:30",
   "nodes": [
     {
       "parameters": {},
@@ -28,7 +28,7 @@
         "promptType": "define",
         "text": "={{ $json.pergunta ?? $json.body?.pergunta ?? $json.query?.pergunta ?? 'Como posso ajudar com os dados do CRM?' }}",
         "options": {
-          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTA DISPONÍVEL:\n\n**espelho_bancario** - Consulta recebimentos e pagamentos bancários\n\n**Entrada flexível:**\n- Dia único: { \"periodo\": \"hoje\" } ou { \"periodo\": \"ontem\" }\n- Período natural: { \"periodo\": \"novembro\" }, { \"periodo\": \"ultimos 15 dias\" }, { \"periodo\": \"esta semana\" }, { \"periodo\": \"semana passada\" }\n- Período manual: { \"data_inicio\": \"2025-11-01\", \"data_fim\": \"2025-11-30\" }\n\n**Retorna:**\n- Total recebido\n- Total pago\n- Saldo líquido do período\n- Recebimentos detalhados por via de pagamento (PIX, Cora, Mercado Pago, Cartão, Dinheiro, Transferência)\n\nUSO:\nChame a tool diretamente passando o período. SEM LIMITE DE TIMEOUT!\n\nRESPONDA:\n- Clara e objetiva\n- Use R$ para valores brasileiros\n- Quando falar de datas, use formato brasileiro (DD/MM/YYYY)\n- Sempre apresente o saldo líquido (recebimentos - pagamentos)"
+          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS VIA MCP GATEWAY:\n\n**1. espelho_bancario** - Consulta recebimentos e pagamentos bancários\n   - Entrada: { \"periodo\": \"hoje\" | \"ontem\" | \"esta semana\" | \"novembro\" | ... } OU { \"data_inicio\": \"YYYY-MM-DD\", \"data_fim\": \"YYYY-MM-DD\" }\n   - Retorna: Total recebido, total pago, saldo líquido e detalhamento por via de pagamento (PIX, Cora, Mercado Pago, Cartão, Dinheiro, Transferência)\n\n**2. monitorar_pedidos_parados** - Monitora pedidos em status 'Costurado e Embalado' há mais de 2 dias\n   - Entrada: Nenhuma (não precisa passar parâmetros)\n   - Retorna: Total de pedidos parados, quantidade crítica (>5 dias), lista com código, cliente, dias parado e status\n\n**3. consultar_pedidos** - Consulta pedidos por período\n   - Entrada: { \"data_inicio\": \"YYYY-MM-DD\", \"data_fim\": \"YYYY-MM-DD\" } (opcional, padrão é hoje)\n   - Retorna: Total de pedidos, valor total, total pago, total devendo, lista dos primeiros 15 pedidos com detalhes\n\n**4. consultar_pagamentos** - Consulta pendências de pagamento no sistema\n   - Entrada: Nenhuma (não precisa passar parâmetros)\n   - Retorna: Total já pago e total a receber\n\nUSO:\nChame a tool 'mcp_gateway_crm' especificando qual endpoint usar no corpo da requisição:\n- Para espelho_bancario: { \"_endpoint\": \"espelho_bancario\", \"periodo\": \"hoje\" }\n- Para monitorar_pedidos_parados: { \"_endpoint\": \"monitorar_pedidos_parados\" }\n- Para consultar_pedidos: { \"_endpoint\": \"consultar_pedidos\", \"data_inicio\": \"2025-12-01\", \"data_fim\": \"2025-12-31\" }\n- Para consultar_pagamentos: { \"_endpoint\": \"consultar_pagamentos\" }\n\nRESPONDA:\n- Clara e objetiva\n- Use R$ para valores brasileiros\n- Quando falar de datas, use formato brasileiro (DD/MM/YYYY)\n- Para espelho_bancario, sempre apresente o saldo líquido (recebimentos - pagamentos)"
         }
       },
       "id": "agent",
@@ -51,10 +51,10 @@
     },
     {
       "parameters": {
-        "name": "espelho_bancario",
-        "description": "Consulta recebimentos PIX, cartão, dinheiro e outros meios de pagamento. Aceita 'periodo' (texto natural como 'hoje', 'ontem', 'esta semana', 'novembro') ou 'data_inicio' e 'data_fim' (formato YYYY-MM-DD). Retorna total recebido, total pago, saldo líquido e detalhamento por via de pagamento.",
+        "name": "mcp_gateway_crm",
+        "description": "Gateway para todas as ferramentas do CRM Camaleão. SEMPRE inclua '_endpoint' no JSON para especificar qual ferramenta usar: 'espelho_bancario' (recebimentos/pagamentos), 'monitorar_pedidos_parados' (pedidos atrasados), 'consultar_pedidos' (pedidos por período), 'consultar_pagamentos' (pendências). Exemplo: {\"_endpoint\": \"espelho_bancario\", \"periodo\": \"hoje\"}",
         "method": "POST",
-        "url": "https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario",
+        "url": "https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,

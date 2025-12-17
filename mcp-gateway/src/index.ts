@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3100;
+const PORT = Number(process.env.PORT) || 3100;
 const API_KEY = process.env.API_KEY || 'camaleao-mcp-key-2025';
 
 // Middlewares
@@ -510,6 +510,58 @@ app.post('/mcp/crm/consultar_pagamentos', async (req, res) => {
     });
   } catch (error: any) {
     console.error('[GATEWAY] Erro:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Unified CRM Router - roteamento baseado em _endpoint no body
+app.post('/mcp/crm', async (req, res) => {
+  try {
+    const { _endpoint, ...args } = req.body;
+
+    if (!_endpoint) {
+      return res.status(400).json({
+        success: false,
+        error: 'Campo "_endpoint" é obrigatório no body',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    console.log(`[GATEWAY] Unified Router -> ${_endpoint}:`, args);
+
+    let result;
+    switch (_endpoint) {
+      case 'espelho_bancario':
+        result = await espelhoBancario(crmClient, args);
+        break;
+      case 'monitorar_pedidos_parados':
+        result = await monitorarPedidosParados(crmClient);
+        break;
+      case 'consultar_pedidos':
+        result = await consultarPedidos(crmClient, args);
+        break;
+      case 'consultar_pagamentos':
+        result = await consultarPagamentos(crmClient);
+        break;
+      default:
+        return res.status(404).json({
+          success: false,
+          error: `Endpoint "${_endpoint}" não encontrado. Disponíveis: espelho_bancario, monitorar_pedidos_parados, consultar_pedidos, consultar_pagamentos`,
+          timestamp: new Date().toISOString(),
+        });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[GATEWAY] Erro no Unified Router:', error);
     res.status(500).json({
       success: false,
       error: error.message,

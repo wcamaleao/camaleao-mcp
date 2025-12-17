@@ -1,0 +1,1 @@
+{"version":3,"file":"consultar-pagamentos.d.ts","sourceRoot":"","sources":["consultar-pagamentos.ts"],"names":[],"mappings":"AAIA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,0BAA0B,CAAC;AAS9D,wBAAsB,mBAAmB,CACvC,MAAM,EAAE,aAAa,GACpB,OAAO,CAAC;IACT,UAAU,EAAE,MAAM,CAAC;IACnB,eAAe,EAAE,MAAM,CAAC;IACxB,QAAQ,EAAE,MAAM,CAAC;CAClB,CAAC,CA4BD"}

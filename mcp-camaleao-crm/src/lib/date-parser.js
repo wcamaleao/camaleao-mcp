@@ -26,6 +26,23 @@ function subDias(data, dias) {
 export function parsePeriodo(input) {
     const hoje = getDataAtualSP();
     const s = input.toLowerCase().trim();
+    // "hoje"
+    if (s === 'hoje' || s === 'hj') {
+        return {
+            data_inicio: formatISO(hoje),
+            data_fim: formatISO(hoje),
+            label: 'hoje',
+        };
+    }
+    // "ontem"
+    if (s === 'ontem') {
+        const ontem = subDias(hoje, 1);
+        return {
+            data_inicio: formatISO(ontem),
+            data_fim: formatISO(ontem),
+            label: 'ontem',
+        };
+    }
     // "últimos X dias"
     const ultimosDiasMatch = s.match(/ultim[oa]s?\s+(\d+)\s+dias?/);
     if (ultimosDiasMatch) {
