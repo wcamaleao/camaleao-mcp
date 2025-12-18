@@ -1000,13 +1000,7 @@
     },
     "🧾 Log Entrada": {
       "main": [
-        [
-          {
-            "node": "🤖 Agente Oráculo",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "OpenAI Model": {
@@ -1292,6 +1286,11 @@
           },
           {
             "node": "🧾 Log Entrada",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🤖 Agente Oráculo",
             "type": "main",
             "index": 0
           }
