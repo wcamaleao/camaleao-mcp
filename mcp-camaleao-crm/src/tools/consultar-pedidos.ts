@@ -63,9 +63,10 @@ export async function consultarPedidos(
 
   // Buscar pedidos em páginas
   for (let page = 1; page <= 100; page++) {
+    console.log(`[CONSULTAR PEDIDOS] Buscando página ${page}...`);
     const query = `
       query {
-        orders(first: 100, page: ${page}) {
+        orders(first: 100, page: ${page}, orderBy: [{ column: CREATED_AT, order: DESC }]) {
           data {
             id
             code
@@ -85,7 +86,25 @@ export async function consultarPedidos(
       break;
     }
 
-    allOrders.push(...response.orders.data);
+    const pageData = response.orders.data;
+    allOrders.push(...pageData);
+
+    if (pageData.length > 0) {
+      const firstDate = pageData[0].created_at;
+      const lastDatePage = pageData[pageData.length - 1].created_at;
+      console.log(`[CONSULTAR PEDIDOS] Pág ${page}: ${firstDate} até ${lastDatePage}`);
+    }
+
+    // OTIMIZAÇÃO: Se o último pedido da página for mais antigo que a data de início, paramos.
+    // Assumindo que a API retorna do mais recente para o mais antigo (agora forçado com orderBy).
+    const lastOrder = pageData[pageData.length - 1];
+    if (lastOrder && lastOrder.created_at) {
+      const lastDate = lastOrder.created_at.split(' ')[0];
+      if (lastDate < dataInicio) {
+        console.log(`[CONSULTAR PEDIDOS] Data limite atingida (${lastDate} < ${dataInicio}). Parando busca.`);
+        break;
+      }
+    }
   }
 
   // Filtrar por período
