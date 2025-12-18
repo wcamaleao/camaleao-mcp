@@ -200,7 +200,10 @@ async function executarConsulta(
     msg += `Nenhum recebimento encontrado.`;
   }
 
-  // Pagamentos e saldo disponíveis no JSON de retorno, mas NÃO na mensagem principal
+  if (totalPago < 0) {
+    msg += `\n\n💸 Pagamentos (Saídas): R$ ${formatarDinheiro(Math.abs(totalPago))}`;
+    msg += `\n📉 Saldo Líquido (Recebido - Pago): R$ ${formatarDinheiro(saldo)}`;
+  }
 
   // Preparar extrato simplificado
   const extrato: Transacao[] = filtered.map(e => ({
