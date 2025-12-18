@@ -34,7 +34,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO oraculo_logs (\n  telefone_cliente,\n  nome_cliente,\n  canal,\n  origem,\n  tipo_mensagem,\n  mensagem,\n  contexto_extra\n)\nVALUES (\n  '{{$json.telefone_cliente}}',\n  '{{$json.nome_cliente.replace(/'/g, \"''\")}}',\n  'whatsapp',\n  'usuario',\n  'texto',\n  '{{$json.mensagem.replace(/'/g, \"''\")}}',\n  '{{ JSON.stringify({ \"workflow\": $workflow.name, \"exec_id\": $execution.id }) }}'::jsonb\n);\n",
+        "query": "INSERT INTO oraculo_logs (\n  telefone_cliente,\n  nome_cliente,\n  canal,\n  origem,\n  tipo_mensagem,\n  mensagem,\n  contexto_extra\n)\nVALUES (\n  '{{$json.telefone_cliente}}',\n  '{{$json.nome_cliente.replace(/'/g, \"''\")}}',\n  'whatsapp',\n  'usuario',\n  'texto',\n  '{{$json.mensagem.replace(/'/g, \"''\")}}',\n  '{{ JSON.stringify({ \"workflow\": $workflow.name, \"exec_id\": $execution.id }) }}'::jsonb\n) RETURNING id;\n",
         "options": {}
       },
       "id": "ef108814-3657-413c-9fb6-3352c47a3f86",
@@ -971,7 +971,7 @@
         1040,
         5760
       ],
-      "notes": "TOOL: RANKING DE EQUIPE\n\nMétricas de performance (últimos 7 dias):\n- Volume de conversas atendidas\n- Total de mensagens enviadas\n- Conversas fechadas\n- Taxa de fechamento (%)\n\nBadges:\n⭐ TOP CLOSER (50+ fechadas)\n💪 HIGH VOLUME (200+ msgs)\n🎯 MASTER (70%+ taxa)\n\n⚠️ NOTA: Atualmente mostra métricas GLOBAIS.\nQuando implementar atendente_id, mostra ranking individual."
+      "notes": "TOOL: AGENTE CAMALEÃO CRM\n\nConsulta informações do CRM Camaleão:\n- Pedidos (quantos, valores, por período)\n- PIX recebido\n- Pagamentos pendentes\n- Pedidos parados em produção\n\nUse quando perguntarem sobre vendas, PIX, recebimentos, pedidos ou valores do CRM."
     }
   ],
   "pinData": {},
