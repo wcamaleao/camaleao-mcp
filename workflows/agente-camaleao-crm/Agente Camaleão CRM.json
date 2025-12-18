@@ -171,87 +171,37 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": []
-        },
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "name": "consultar_pedidos",
+        "description": "Busca pedidos por período. Retorna total de pedidos, valor total e lista de pedidos. Suporta filtros por cliente, status e data.",
+        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { 'Content-Type': 'application/json' },\n  body: {\n    periodo: $fromAI('periodo', '', 'string'),\n    data_inicio: $fromAI('data_inicio', '', 'string'),\n    data_fim: $fromAI('data_fim', '', 'string'),\n    cliente: $fromAI('cliente', '', 'string')\n  },\n  returnFullResponse: true\n});\nreturn response.body;",
+        "specifyInputSchema": true,
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'esta semana', 'novembro', etc.\"\n    },\n    \"data_inicio\": {\n      \"type\": \"string\",\n      \"description\": \"Data de início (YYYY-MM-DD)\"\n    },\n    \"data_fim\": {\n      \"type\": \"string\",\n      \"description\": \"Data de fim (YYYY-MM-DD)\"\n    },\n    \"cliente\": {\n      \"type\": \"string\",\n      \"description\": \"Nome do cliente para filtrar\"\n    }\n  }\n}"
       },
       "id": "117f8434-0c07-44c2-af51-c6247d86cc08",
       "name": "📋 Tool: Consultar Pedidos",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1.1,
       "position": [
         25632,
         20832
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEW_API_KEY_CREDENTIAL",
-          "name": "MCP Gateway API Key"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": []
-        },
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "autodetect"
-            }
-          }
-        }
+        "name": "espelho_bancario",
+        "description": "Consulta recebimentos PIX, cartão e dinheiro do espelho bancário. Retorna total recebido, saldo e detalhes por via de pagamento.",
+        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { 'Content-Type': 'application/json' },\n  body: {\n    periodo: $fromAI('periodo', '', 'string'),\n    data_inicio: $fromAI('data_inicio', '', 'string'),\n    data_fim: $fromAI('data_fim', '', 'string'),\n    data: $fromAI('data', '', 'string')\n  },\n  returnFullResponse: true\n});\nreturn response.body;",
+        "specifyInputSchema": true,
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'esta semana', 'novembro', etc.\"\n    },\n    \"data_inicio\": {\n      \"type\": \"string\",\n      \"description\": \"Data de início (YYYY-MM-DD)\"\n    },\n    \"data_fim\": {\n      \"type\": \"string\",\n      \"description\": \"Data de fim (YYYY-MM-DD)\"\n    },\n    \"data\": {\n      \"type\": \"string\",\n      \"description\": \"Data única no formato YYYY-MM-DD ou 'hoje'\"\n    }\n  }\n}"
       },
       "id": "NEW_HTTP_REQUEST_TOOL_ID",
       "name": "🌐 Tool: Espelho Bancário Gateway",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
       "typeVersion": 1.1,
       "position": [
         25824,
         20832
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEW_API_KEY_CREDENTIAL",
-          "name": "MCP Gateway API Key"
-        }
-      }
+      ]
     },
     {
       "parameters": {
