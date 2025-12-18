@@ -2,7 +2,18 @@
   "name": "Agente Camaleão CRM + MCP Gateway - VERSAO ATUALIZADA 17/12 11:42",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "inputSchema": {
+          "parameters": [
+            {
+              "name": "pergunta",
+              "type": "string",
+              "label": "pergunta",
+              "required": true
+            }
+          ]
+        }
+      },
       "id": "45975a6a-5548-424b-8f52-4708c1823784",
       "name": "▶️ Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
