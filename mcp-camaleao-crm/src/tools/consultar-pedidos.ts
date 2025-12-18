@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { GraphQLClient } from '../lib/graphql-client.js';
-import { normalizaData, hojeSP, isoParaBR } from '../lib/date-parser.js';
+import { normalizaData, hojeSP, isoParaBR, parsePeriodo } from '../lib/date-parser.js';
 
 interface Order {
   id: string;
@@ -31,7 +31,7 @@ interface PedidoResumo {
 
 export async function consultarPedidos(
   client: GraphQLClient,
-  args: { data_inicio?: string; data_fim?: string }
+  args: { data_inicio?: string; data_fim?: string; periodo?: string }
 ): Promise<{
   periodo: string;
   total_pedidos: number;
@@ -44,10 +44,20 @@ export async function consultarPedidos(
   await client.ensureAuthenticated();
 
   // Normalizar datas
-  const dataInicio = args.data_inicio ? normalizaData(args.data_inicio) : hojeSP();
-  const dataFim = args.data_fim ? normalizaData(args.data_fim) : dataInicio;
+  let dataInicio = args.data_inicio ? normalizaData(args.data_inicio) : hojeSP();
+  let dataFim = args.data_fim ? normalizaData(args.data_fim) : dataInicio;
+  let periodoLabel = args.periodo || (dataInicio === dataFim ? isoParaBR(dataInicio) : `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`);
 
-  console.log(`[CONSULTAR PEDIDOS] Período: ${dataInicio} a ${dataFim}`);
+  if (args.periodo) {
+    const periodoDetectado = parsePeriodo(args.periodo);
+    if (periodoDetectado) {
+      dataInicio = periodoDetectado.data_inicio;
+      dataFim = periodoDetectado.data_fim;
+      periodoLabel = periodoDetectado.label;
+    }
+  }
+
+  console.log(`[CONSULTAR PEDIDOS] Período: ${dataInicio} a ${dataFim} (${periodoLabel})`);
 
   const allOrders: Order[] = [];
 
@@ -99,8 +109,6 @@ export async function consultarPedidos(
     pago: o.total_paid,
     devendo: o.total_owing,
   }));
-
-  const periodoLabel = dataInicio === dataFim ? isoParaBR(dataInicio) : `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
 
   let mensagem = `📊 Pedidos - ${periodoLabel}\n\n`;
   mensagem += `Total de pedidos: ${filtered.length}\n`;

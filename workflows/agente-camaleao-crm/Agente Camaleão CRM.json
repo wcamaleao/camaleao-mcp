@@ -120,7 +120,7 @@
         "promptType": "define",
         "text": "={{ $json.pergunta ?? $json.body?.pergunta ?? $json.query?.pergunta ?? 'Como posso ajudar com os dados do CRM?' }}",
         "options": {
-          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS (4 tools):\n\n1. **monitorar_pedidos_parados** - Detecta pedidos em 'Costurado e Embalado' parados > 2 dias (desde 01/09/2025)\n   Use para: pedidos parados, gargalos de produção, status travado\n\n2. **consultar_pedidos** - Busca pedidos por período (data_inicio, data_fim)\n   Use para: quantos pedidos, vendas do dia/semana/mês, valores de pedidos\n\n3. **espelho_bancario** - Recebimentos PIX/cartão/dinheiro (SUPORTA PERÍODOS!)\n\n   **PROTOCOLO DE DATAS (Use estes COMANDOS no campo 'periodo'):**\n   - 'HOJE', 'ONTEM', 'ANTEONTEM'\n   - 'SEMANA_ATUAL', 'SEMANA_PASSADA'\n   - 'MES_ATUAL', 'MES_PASSADO'\n   \n   **DIAS DA SEMANA (Normalização Inteligente):**\n   Se o usuário disser \"naquela sexta\", \"sexta passada\", \"sexta anterior\", normalize para:\n   - 'SEGUNDA_PASSADA', 'TERCA_PASSADA', 'QUARTA_PASSADA', 'QUINTA_PASSADA', 'SEXTA_PASSADA', 'SABADO_PASSADO', 'DOMINGO_PASSADO'\n\n   ⚠️ **REGRA DE OURO:** NUNCA calcule datas numéricas (ex: não tente adivinhar que sexta passada foi dia 12). Use o comando `SEXTA_PASSADA` e deixe o sistema calcular.\n\n   **Outras opções:**\n   - Dia exato: { \"data\": \"2025-12-16\" } (Só se o usuário falar a data explícita)\n   - Intervalo: { \"data_inicio\": \"...\", \"data_fim\": \"...\" }\n\n   Chame a tool diretamente e apresente o resultado.\n\n4. **consultar_pagamentos** - Pendências de pagamento totais\n   Use para: quanto a receber, pendências, valores em aberto\n\nRESPONDA:\n- Clara e objetiva\n- Use R$ para valores brasileiros\n- Alerte URGENTE se pedido parado > 7 dias\n- Liste sempre os mais críticos primeiro\n- Quando falar de datas, use formato brasileiro (DD/MM/YYYY)"
+          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS (4 tools):\n\n1. **monitorar_pedidos_parados** - Detecta pedidos em 'Costurado e Embalado' parados > 2 dias (desde 01/09/2025)\n   Use para: pedidos parados, gargalos de produção, status travado\n\n2. **consultar_pedidos** - Busca pedidos por período.\n   Use para: quantos pedidos, vendas do dia/semana/mês, valores de pedidos\n   SUPORTA PERÍODOS NATURAIS (Use o campo 'periodo')\n\n3. **espelho_bancario** - Recebimentos PIX/cartão/dinheiro\n   SUPORTA PERÍODOS NATURAIS (Use o campo 'periodo')\n\n   **PROTOCOLO DE DATAS (PARA 'consultar_pedidos' E 'espelho_bancario'):**\n   Use o campo `periodo` com estes valores:\n   - 'HOJE', 'ONTEM', 'ANTEONTEM'\n   - 'SEMANA_ATUAL', 'SEMANA_PASSADA'\n   - 'MES_ATUAL', 'MES_PASSADO'\n   \n   **DIAS DA SEMANA (Normalização Inteligente):**\n   Se o usuário disser \"naquela sexta\", \"sexta passada\", \"sexta anterior\", normalize para:\n   - 'SEGUNDA_PASSADA', 'TERCA_PASSADA', 'QUARTA_PASSADA', 'QUINTA_PASSADA', 'SEXTA_PASSADA', 'SABADO_PASSADO', 'DOMINGO_PASSADO'\n\n   ⚠️ **REGRA DE OURO:** NUNCA calcule datas numéricas (ex: não tente adivinhar que sexta passada foi dia 12). Use o comando `SEXTA_PASSADA` e deixe o sistema calcular.\n\n   **Outras opções:**\n   - Dia exato: { \"data\": \"2025-12-16\" } (Só se o usuário falar a data explícita)\n   - Intervalo: { \"data_inicio\": \"...\", \"data_fim\": \"...\" }\n\n   Chame a tool diretamente e apresente o resultado.\n\n4. **consultar_pagamentos** - Pendências de pagamento totais\n   Use para: quanto a receber, pendências, valores em aberto\n\nRESPONDA:\n- Clara e objetiva\n- Use R$ para valores brasileiros\n- Alerte URGENTE se pedido parado > 7 dias\n- Liste sempre os mais críticos primeiro\n- Quando falar de datas, use formato brasileiro (DD/MM/YYYY)"
         }
       },
       "id": "87dfcea3-5aae-4831-a3dd-c01d03956e58",
@@ -171,19 +171,45 @@
     },
     {
       "parameters": {
-        "name": "consultar_pedidos",
-        "description": "Consulta pedidos criados em um período (data_inicio, data_fim no formato YYYY-MM-DD). Retorna total, valores e lista de pedidos.",
-        "jsCode": "const dataInicio = $input.item.json.data_inicio || new Date().toISOString().split('T')[0];\nconst dataFim = $input.item.json.data_fim || dataInicio;\nconst API_URL = 'https://web-api.camaleaocamisas.com.br/graphql-api';\nconst EMAIL = 'api-gerente@email.com';\nconst PASSWORD = 'PPTDYBYqcmE7wg';\nlet cookies = '';\n\nasync function graphqlRequest(query) {\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: API_URL,\n    headers: { 'Content-Type': 'application/json', ...(cookies && { 'Cookie': cookies }) },\n    body: { query },\n    returnFullResponse: true\n  });\n  if (response.headers['set-cookie']) {\n    cookies = Array.isArray(response.headers['set-cookie']) \n      ? response.headers['set-cookie'].join('; ') \n      : response.headers['set-cookie'];\n  }\n  return JSON.parse(response.body);\n}\n\nawait graphqlRequest.call(this, `mutation { login(email: \"${EMAIL}\", password: \"${PASSWORD}\", remember: false) { id } }`);\nlet allOrders = [];\nfor (let page = 1; page <= 100; page++) {\n  const ordersQuery = await graphqlRequest.call(this, `query { orders(first: 100, page: ${page}) { data { id code created_at price total_paid total_owing client { name } } } }`);\n  if (!ordersQuery.data?.orders) break;\n  allOrders = allOrders.concat(ordersQuery.data.orders.data);\n}\nconst filtered = allOrders.filter(o => {\n  const createdDate = o.created_at.split(' ')[0];\n  return createdDate >= dataInicio && createdDate <= dataFim;\n});\nconst total = filtered.reduce((sum, o) => sum + (o.price || 0), 0);\nconst pago = filtered.reduce((sum, o) => sum + (o.total_paid || 0), 0);\nconst devendo = filtered.reduce((sum, o) => sum + (o.total_owing || 0), 0);\nreturn JSON.stringify({\n  periodo: `${dataInicio} a ${dataFim}`,\n  total_pedidos: filtered.length,\n  valor_total: total,\n  total_pago: pago,\n  total_devendo: devendo,\n  pedidos: filtered.slice(0, 15).map(o => ({ codigo: o.code, cliente: o.client?.name || 'Sem nome', valor: o.price, pago: o.total_paid, devendo: o.total_owing }))\n});",
-        "specifyInputSchema": true
+        "method": "POST",
+        "url": "https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "autodetect"
+            }
+          }
+        }
       },
       "id": "117f8434-0c07-44c2-af51-c6247d86cc08",
       "name": "📋 Tool: Consultar Pedidos",
-      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
       "typeVersion": 1.1,
       "position": [
         25632,
         20832
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NEW_API_KEY_CREDENTIAL",
+          "name": "MCP Gateway API Key"
+        }
+      }
     },
     {
       "parameters": {

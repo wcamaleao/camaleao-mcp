@@ -13,6 +13,7 @@ import {
 
 import { GraphQLClient } from './lib/graphql-client.js';
 import { espelhoBancario } from './tools/espelho-bancario.js';
+import { consultarPedidos } from './tools/consultar-pedidos.js';
 
 // Configuração
 const API_URL = 'https://web-api.camaleaocamisas.com.br/graphql-api';
@@ -213,11 +214,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'consultar_pedidos': {
+        const result = await consultarPedidos(graphqlClient, args || {});
         return {
           content: [
             {
               type: 'text',
-              text: 'Tool "consultar_pedidos" em desenvolvimento',
+              text: JSON.stringify(result, null, 2),
             },
           ],
         };
