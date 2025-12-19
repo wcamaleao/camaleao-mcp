@@ -43,18 +43,43 @@ export async function consultarPedidos(
 }> {
   await client.ensureAuthenticated();
 
-  // Normalizar datas
-  let dataInicio = args.data_inicio ? normalizaData(args.data_inicio) : hojeSP();
-  let dataFim = args.data_fim ? normalizaData(args.data_fim) : dataInicio;
-  let periodoLabel = args.periodo || (dataInicio === dataFim ? isoParaBR(dataInicio) : `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`);
+  // Limpar strings vazias
+  const periodoInput = (args.periodo || '').trim();
+  const dataInicioInput = (args.data_inicio || '').trim();
+  const dataFimInput = (args.data_fim || '').trim();
 
-  if (args.periodo) {
-    const periodoDetectado = parsePeriodo(args.periodo);
+  // Determinar período
+  let dataInicio: string;
+  let dataFim: string;
+  let periodoLabel: string;
+
+  if (periodoInput) {
+    const periodoDetectado = parsePeriodo(periodoInput);
     if (periodoDetectado) {
       dataInicio = periodoDetectado.data_inicio;
       dataFim = periodoDetectado.data_fim;
       periodoLabel = periodoDetectado.label;
+    } else {
+      // Período não reconhecido - retornar erro
+      return {
+        periodo: 'erro',
+        total_pedidos: 0,
+        valor_total: 0,
+        total_pago: 0,
+        total_devendo: 0,
+        pedidos: [],
+        mensagem: `⚠️ Não entendi o período "${periodoInput}". Tente: hoje, ontem, semana passada, etc.`
+      };
     }
+  } else if (dataInicioInput && dataFimInput) {
+    dataInicio = normalizaData(dataInicioInput);
+    dataFim = normalizaData(dataFimInput);
+    periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
+  } else {
+    // Default: hoje
+    dataInicio = hojeSP();
+    dataFim = dataInicio;
+    periodoLabel = 'hoje';
   }
 
   console.log(`[CONSULTAR PEDIDOS] Período: ${dataInicio} a ${dataFim} (${periodoLabel})`);

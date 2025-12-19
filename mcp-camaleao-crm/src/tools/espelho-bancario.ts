@@ -28,35 +28,40 @@ export async function espelhoBancario(
   let dataFim: string;
   let periodoLabel: string;
 
-  const periodoDetectado = parsePeriodo(
-    args.periodo || args.data || ''
-  );
+  // Limpar strings vazias
+  const periodoInput = (args.periodo || '').trim();
+  const dataInput = (args.data || '').trim();
+  const dataInicioInput = (args.data_inicio || '').trim();
+  const dataFimInput = (args.data_fim || '').trim();
+
+  const periodoDetectado = parsePeriodo(periodoInput || dataInput);
 
   if (periodoDetectado) {
     dataInicio = periodoDetectado.data_inicio;
     dataFim = periodoDetectado.data_fim;
     periodoLabel = periodoDetectado.label;
-  } else if (args.data_inicio && args.data_fim) {
-    dataInicio = normalizaData(args.data_inicio);
-    dataFim = normalizaData(args.data_fim);
+  } else if (dataInicioInput && dataFimInput) {
+    dataInicio = normalizaData(dataInicioInput);
+    dataFim = normalizaData(dataFimInput);
     periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
-  } else if (args.data) {
-    dataInicio = normalizaData(args.data);
+  } else if (dataInput) {
+    dataInicio = normalizaData(dataInput);
     dataFim = dataInicio;
     periodoLabel = isoParaBR(dataInicio);
   } else {
     // Se o usuário tentou passar um período mas não entendemos, ERRO (não inventar "hoje")
-    if (args.periodo) {
+    if (periodoInput && periodoInput !== '') {
       return {
         data_inicio: '',
         data_fim: '',
         periodo_label: 'erro',
-        mensagem: `⚠️ Não entendi o período "${args.periodo}".\n\nTente usar:\n- "hoje", "ontem", "anteontem"\n- "semana passada", "esta semana"\n- "mês passado", "este mês"\n- Ou uma data: "15/12/2025"`,
+        mensagem: `⚠️ Não entendi o período "${periodoInput}".\n\nTente usar:\n- "hoje", "ontem", "anteontem"\n- "semana passada", "esta semana"\n- "mês passado", "este mês"\n- Ou uma data: "15/12/2025"`,
         total_recebido: 0,
         recebimentos_por_via: []
       };
     }
 
+    // Default: hoje
     dataInicio = hojeSP();
     dataFim = dataInicio;
     periodoLabel = 'hoje';

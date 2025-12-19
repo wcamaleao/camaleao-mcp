@@ -3,13 +3,10 @@
   "nodes": [
     {
       "parameters": {
-        "inputSchema": {
-          "parameters": [
+        "workflowInputs": {
+          "values": [
             {
-              "name": "pergunta",
-              "type": "string",
-              "label": "pergunta",
-              "required": true
+              "name": "pergunta"
             }
           ]
         }
@@ -17,7 +14,7 @@
       "id": "45975a6a-5548-424b-8f52-4708c1823784",
       "name": "▶️ Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
+      "typeVersion": 1.1,
       "position": [
         25120,
         20368
@@ -131,7 +128,8 @@
         "promptType": "define",
         "text": "={{ $json.pergunta ?? $json.body?.pergunta ?? $json.query?.pergunta ?? 'Como posso ajudar com os dados do CRM?' }}",
         "options": {
-          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS (4 tools):\n\n1. **monitorar_pedidos_parados** - Detecta pedidos em 'Costurado e Embalado' parados > 2 dias (desde 01/09/2025)\n   Use para: pedidos parados, gargalos de produção, status travado\n\n2. **consultar_pedidos** - Busca pedidos por período.\n   Use para: quantos pedidos, vendas do dia/semana/mês, valores de pedidos\n   SUPORTA PERÍODOS NATURAIS (Use o campo 'periodo')\n\n3. **espelho_bancario** - Recebimentos PIX/cartão/dinheiro\n   SUPORTA PERÍODOS NATURAIS (Use o campo 'periodo')\n\n   **PROTOCOLO DE DATAS (PARA 'consultar_pedidos' E 'espelho_bancario'):**\n   Use o campo `periodo` com estes valores:\n   - 'HOJE', 'ONTEM', 'ANTEONTEM'\n   - 'SEMANA_ATUAL', 'SEMANA_PASSADA'\n   - 'MES_ATUAL', 'MES_PASSADO'\n   \n   **DIAS DA SEMANA (Normalização Inteligente):**\n   Se o usuário disser \"naquela sexta\", \"sexta passada\", \"sexta anterior\", normalize para:\n   - 'SEGUNDA_PASSADA', 'TERCA_PASSADA', 'QUARTA_PASSADA', 'QUINTA_PASSADA', 'SEXTA_PASSADA', 'SABADO_PASSADO', 'DOMINGO_PASSADO'\n\n   ⚠️ **REGRA DE OURO:** NUNCA calcule datas numéricas (ex: não tente adivinhar que sexta passada foi dia 12). Use o comando `SEXTA_PASSADA` e deixe o sistema calcular.\n\n   **Outras opções:**\n   - Dia exato: { \"data\": \"2025-12-16\" } (Só se o usuário falar a data explícita)\n   - Intervalo: { \"data_inicio\": \"...\", \"data_fim\": \"...\" }\n\n   Chame a tool diretamente e apresente o resultado.\n\n4. **consultar_pagamentos** - Pendências de pagamento totais\n   Use para: quanto a receber, pendências, valores em aberto\n\nRESPONDA:\n- Clara e objetiva\n- Use R$ para valores brasileiros\n- Alerte URGENTE se pedido parado > 7 dias\n- Liste sempre os mais críticos primeiro\n- Quando falar de datas, use formato brasileiro (DD/MM/YYYY)"
+          "maxIterations": 3,
+          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS:\n\n1. **consultar_pedidos** - Busca pedidos por período\n   - Use quando perguntarem sobre: vendas, pedidos, valores de pedidos\n   - Parâmetro 'periodo': envie exatamente como o usuário falar ('hoje', 'ontem', 'semana passada', etc.)\n\n2. **espelho_bancario** - Recebimentos (PIX, cartão, dinheiro)\n   - Use quando perguntarem sobre: pagamentos, recebimentos, PIX, saldo\n   - Parâmetro 'periodo': envie exatamente como o usuário falar ('hoje', 'ontem', 'semana passada', etc.)\n\n3. **monitorar_pedidos_parados** - Detecta pedidos parados\n   - Use para: gargalos, pedidos travados\n\n4. **consultar_pagamentos** - Pendências totais\n   - Use para: quanto a receber, valores em aberto\n\nINSTRUÇÕES:\n- Chame a ferramenta apropriada\n- Retorne o resultado da ferramenta diretamente para o usuário\n- Use R$ para valores\n- Formato de data: DD/MM/YYYY"
         }
       },
       "id": "87dfcea3-5aae-4831-a3dd-c01d03956e58",
@@ -184,9 +182,11 @@
       "parameters": {
         "name": "consultar_pedidos",
         "description": "Busca pedidos por período. Retorna total de pedidos, valor total e lista de pedidos. Suporta filtros por cliente, status e data.",
-        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { 'Content-Type': 'application/json' },\n  body: {\n    periodo: $fromAI('periodo', '', 'string'),\n    data_inicio: $fromAI('data_inicio', '', 'string'),\n    data_fim: $fromAI('data_fim', '', 'string'),\n    cliente: $fromAI('cliente', '', 'string')\n  },\n  returnFullResponse: true\n});\nreturn response.body;",
+        "jsCode": "// Pegar o período de onde a OpenAI realmente envia\nconst query = $input.item.json.query || {};\nconst periodo = query.some_input || query.periodo || $fromAI('periodo', 'hoje', 'string');\nconst cliente = query.cliente || $fromAI('cliente', '', 'string');\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo, cliente }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'esta semana', 'novembro', etc.\"\n    },\n    \"data_inicio\": {\n      \"type\": \"string\",\n      \"description\": \"Data de início (YYYY-MM-DD)\"\n    },\n    \"data_fim\": {\n      \"type\": \"string\",\n      \"description\": \"Data de fim (YYYY-MM-DD)\"\n    },\n    \"cliente\": {\n      \"type\": \"string\",\n      \"description\": \"Nome do cliente para filtrar\"\n    }\n  }\n}"
+        "specifyOutputSchema": true,
+        "outputSchemaJson": "{\n  \"type\": \"string\",\n  \"description\": \"Relatório formatado dos pedidos\"\n}",
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'ontem', 'semana passada', etc.\"\n    },\n    \"cliente\": {\n      \"type\": \"string\",\n      \"description\": \"Nome do cliente (opcional)\"\n    }\n  },\n  \"required\": [\"periodo\"]\n}"
       },
       "id": "117f8434-0c07-44c2-af51-c6247d86cc08",
       "name": "📋 Tool: Consultar Pedidos",
@@ -201,9 +201,11 @@
       "parameters": {
         "name": "espelho_bancario",
         "description": "Consulta recebimentos PIX, cartão e dinheiro do espelho bancário. Retorna total recebido, saldo e detalhes por via de pagamento.",
-        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { 'Content-Type': 'application/json' },\n  body: {\n    periodo: $fromAI('periodo', '', 'string'),\n    data_inicio: $fromAI('data_inicio', '', 'string'),\n    data_fim: $fromAI('data_fim', '', 'string'),\n    data: $fromAI('data', '', 'string')\n  },\n  returnFullResponse: true\n});\nreturn response.body;",
+        "jsCode": "// Pegar o período de onde a OpenAI realmente envia\nconst query = $input.item.json.query || {};\nconst periodo = query.some_input || query.periodo || $fromAI('periodo', 'hoje', 'string');\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'esta semana', 'novembro', etc.\"\n    },\n    \"data_inicio\": {\n      \"type\": \"string\",\n      \"description\": \"Data de início (YYYY-MM-DD)\"\n    },\n    \"data_fim\": {\n      \"type\": \"string\",\n      \"description\": \"Data de fim (YYYY-MM-DD)\"\n    },\n    \"data\": {\n      \"type\": \"string\",\n      \"description\": \"Data única no formato YYYY-MM-DD ou 'hoje'\"\n    }\n  }\n}"
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'ontem', 'semana passada', etc.\"\n    }\n  },\n  \"required\": [\"periodo\"]\n}",
+        "specifyOutputSchema": true,
+        "outputSchemaJson": "{\n  \"type\": \"string\",\n  \"description\": \"Relatório formatado dos recebimentos\"\n}"
       },
       "id": "NEW_HTTP_REQUEST_TOOL_ID",
       "name": "🌐 Tool: Espelho Bancário Gateway",
