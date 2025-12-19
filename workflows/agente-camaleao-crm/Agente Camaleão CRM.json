@@ -129,7 +129,7 @@
         "text": "={{ $json.pergunta ?? $json.body?.pergunta ?? $json.query?.pergunta ?? 'Como posso ajudar com os dados do CRM?' }}",
         "options": {
           "maxIterations": 3,
-          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS:\n\n1. **consultar_pedidos** - Busca pedidos por período\n   - Use quando perguntarem sobre: vendas, pedidos, valores de pedidos\n   - Parâmetro 'periodo': envie exatamente como o usuário falar ('hoje', 'ontem', 'semana passada', etc.)\n\n2. **espelho_bancario** - Recebimentos (PIX, cartão, dinheiro)\n   - Use quando perguntarem sobre: pagamentos, recebimentos, PIX, saldo\n   - Parâmetro 'periodo': envie exatamente como o usuário falar ('hoje', 'ontem', 'semana passada', etc.)\n\n3. **monitorar_pedidos_parados** - Detecta pedidos parados\n   - Use para: gargalos, pedidos travados\n\n4. **consultar_pagamentos** - Pendências totais\n   - Use para: quanto a receber, valores em aberto\n\nINSTRUÇÕES:\n- Chame a ferramenta apropriada\n- Retorne o resultado da ferramenta diretamente para o usuário\n- Use R$ para valores\n- Formato de data: DD/MM/YYYY"
+          "systemMessage": "Você é o Agente Camaleão CRM, especialista em dados da Camaleão Camisas.\n\nFERRAMENTAS DISPONÍVEIS:\n\n1. **consultar_pedidos** - Busca pedidos por período\n   - Use para: vendas, pedidos, valores\n   - Parâmetro 'pergunta': Envie a frase completa do usuário ou o termo exato (ex: 'ontem'). NUNCA calcule datas (não transforme 'ontem' em '2025-12-17').\n\n2. **espelho_bancario** - Recebimentos (PIX, cartão, dinheiro)\n   - Use para: pagamentos, recebimentos, saldo\n   - Parâmetro 'pergunta': Envie a frase completa do usuário ou o termo exato. NUNCA calcule datas.\n\n3. **monitorar_pedidos_parados** - Detecta pedidos parados\n\n4. **consultar_pagamentos** - Pendências totais\n\nINSTRUÇÕES:\n- O sistema sabe que dia é hoje. Deixe ele calcular as datas.\n- Retorne o resultado da ferramenta diretamente.\n- Use R$ para valores."
         }
       },
       "id": "87dfcea3-5aae-4831-a3dd-c01d03956e58",
@@ -181,7 +181,7 @@
     {
       "parameters": {
         "name": "consultar_pedidos",
-        "description": "Busca pedidos por período. Repasse a pergunta do usuário completa.",
+        "description": "Busca pedidos. Passe a pergunta completa ou o termo de tempo (hoje, ontem, etc). NÃO converta para data YYYY-MM-DD.",
         "jsCode": "// Pegar a pergunta original do usuário\nconst pergunta = $fromAI('pergunta', '', 'string') || $input.item.json.pergunta || 'hoje';\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo: pergunta, cliente: '' }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
         "specifyOutputSchema": true,
@@ -200,7 +200,7 @@
     {
       "parameters": {
         "name": "espelho_bancario",
-        "description": "Consulta recebimentos (PIX/cartão/dinheiro). Repasse a pergunta do usuário completa.",
+        "description": "Consulta recebimentos. Passe a pergunta completa ou o termo de tempo. NÃO converta para data YYYY-MM-DD.",
         "jsCode": "// Pegar a pergunta original do usuário\nconst pergunta = $fromAI('pergunta', '', 'string') || $input.item.json.pergunta || 'hoje';\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo: pergunta }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
         "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"pergunta\": {\n      \"type\": \"string\",\n      \"description\": \"A pergunta completa do usuário\"\n    }\n  },\n  \"required\": [\"pergunta\"]\n}",

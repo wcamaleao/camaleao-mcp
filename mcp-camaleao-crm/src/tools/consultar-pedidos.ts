@@ -31,7 +31,7 @@ interface PedidoResumo {
 
 export async function consultarPedidos(
   client: GraphQLClient,
-  args: { data_inicio?: string; data_fim?: string; periodo?: string }
+  args: { data_inicio?: string; data_fim?: string; periodo?: string; pergunta?: string }
 ): Promise<{
   periodo: string;
   total_pedidos: number;
@@ -45,6 +45,7 @@ export async function consultarPedidos(
 
   // Limpar strings vazias
   const periodoInput = (args.periodo || '').trim();
+  const perguntaInput = (args.pergunta || '').trim();
   const dataInicioInput = (args.data_inicio || '').trim();
   const dataFimInput = (args.data_fim || '').trim();
 
@@ -53,14 +54,25 @@ export async function consultarPedidos(
   let dataFim: string;
   let periodoLabel: string;
 
-  if (periodoInput) {
-    const periodoDetectado = parsePeriodo(periodoInput);
-    if (periodoDetectado) {
-      dataInicio = periodoDetectado.data_inicio;
-      dataFim = periodoDetectado.data_fim;
-      periodoLabel = periodoDetectado.label;
-    } else {
-      // Período não reconhecido - retornar erro
+  // 1. Tenta parsear o 'periodo' explícito (vindo da IA)
+  let periodoDetectado = periodoInput ? parsePeriodo(periodoInput) : null;
+
+  // 2. Se falhar, tenta parsear a 'pergunta' completa (contexto)
+  if (!periodoDetectado && perguntaInput) {
+    periodoDetectado = parsePeriodo(perguntaInput);
+  }
+
+  if (periodoDetectado) {
+    dataInicio = periodoDetectado.data_inicio;
+    dataFim = periodoDetectado.data_fim;
+    periodoLabel = periodoDetectado.label;
+  } else if (dataInicioInput && dataFimInput) {
+    dataInicio = normalizaData(dataInicioInput);
+    dataFim = normalizaData(dataFimInput);
+    periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
+  } else {
+    // Se o usuário tentou passar um período mas não entendemos, ERRO
+    if (periodoInput && periodoInput !== '') {
       return {
         periodo: 'erro',
         total_pedidos: 0,
@@ -71,11 +83,7 @@ export async function consultarPedidos(
         mensagem: `⚠️ Não entendi o período "${periodoInput}". Tente: hoje, ontem, semana passada, etc.`
       };
     }
-  } else if (dataInicioInput && dataFimInput) {
-    dataInicio = normalizaData(dataInicioInput);
-    dataFim = normalizaData(dataFimInput);
-    periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
-  } else {
+
     // Default: hoje
     dataInicio = hojeSP();
     dataFim = dataInicio;

@@ -72,6 +72,18 @@ export function parsePeriodo(input: string): PeriodoDetectado | null {
   // 1. COMANDOS ESTRUTURADOS (PRIORIDADE MÁXIMA)
   // ═══════════════════════════════════════════════════════════════
   
+  // ISO Date (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return { data_inicio: s, data_fim: s, label: isoParaBR(s) };
+  }
+
+  // BR Date (DD/MM/YYYY)
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [d, m, y] = s.split('/');
+    const iso = `${y}-${m}-${d}`;
+    return { data_inicio: iso, data_fim: iso, label: s };
+  }
+
   if (s === 'hoje' || s === 'today') {
     return { data_inicio: formatISO(hoje), data_fim: formatISO(hoje), label: 'hoje' };
   }
@@ -340,4 +352,86 @@ export function isoParaBR(iso: string): string {
   const [y, m, d] = iso.split('-');
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
+}
+
+export interface PeriodoResolvido {
+  dataInicio: string;
+  dataFim: string;
+  periodoLabel: string;
+  erro?: string;
+}
+
+export function resolvePeriodo(args: { periodo?: string; data?: string; data_inicio?: string; data_fim?: string }): PeriodoResolvido {
+  const periodoInput = (args.periodo || args.data || '').trim();
+  const dataInicioInput = (args.data_inicio || '').trim();
+  const dataFimInput = (args.data_fim || '').trim();
+
+  if (periodoInput) {
+    const periodoDetectado = parsePeriodo(periodoInput);
+    if (periodoDetectado) {
+      return {
+        dataInicio: periodoDetectado.data_inicio,
+        dataFim: periodoDetectado.data_fim,
+        periodoLabel: periodoDetectado.label
+      };
+    } else {
+      // Tenta parsear como data direta se falhar o parsePeriodo (ex: "2025-12-01")
+      try {
+        const d = normalizaData(periodoInput);
+        return {
+            dataInicio: d,
+            dataFim: d,
+            periodoLabel: isoParaBR(d)
+        };
+      } catch {
+        return {
+            dataInicio: '',
+            dataFim: '',
+            periodoLabel: 'erro',
+            erro: `⚠️ Não entendi o período "${periodoInput}". Tente: hoje, ontem, semana passada, etc.`
+        };
+      }
+    }
+  } else if (dataInicioInput && dataFimInput) {
+    try {
+      const i = normalizaData(dataInicioInput);
+      const f = normalizaData(dataFimInput);
+      return {
+        dataInicio: i,
+        dataFim: f,
+        periodoLabel: `${isoParaBR(i)} a ${isoParaBR(f)}`
+      };
+    } catch (e) {
+       return {
+        dataInicio: '',
+        dataFim: '',
+        periodoLabel: 'erro',
+        erro: `⚠️ Data inválida fornecida.`
+      };
+    }
+  } else if (dataInicioInput) {
+     try {
+      const i = normalizaData(dataInicioInput);
+      return {
+        dataInicio: i,
+        dataFim: i,
+        periodoLabel: isoParaBR(i)
+      };
+    } catch (e) {
+       return {
+        dataInicio: '',
+        dataFim: '',
+        periodoLabel: 'erro',
+        erro: `⚠️ Data inválida fornecida.`
+      };
+    }
+  }
+
+  // Default
+  const h = hojeSP();
+  return {
+    dataInicio: h,
+    dataFim: h,
+    periodoLabel: 'hoje'
+  };
 }

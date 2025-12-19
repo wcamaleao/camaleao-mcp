@@ -19,7 +19,7 @@ interface EntriesBankMirrorResponse {
 
 export async function espelhoBancario(
   client: GraphQLClient,
-  args: { data?: string; data_inicio?: string; data_fim?: string; periodo?: string; cliente?: string }
+  args: { data?: string; data_inicio?: string; data_fim?: string; periodo?: string; cliente?: string; pergunta?: string }
 ): Promise<EspelhoBancarioResult> {
   await client.ensureAuthenticated();
 
@@ -30,11 +30,23 @@ export async function espelhoBancario(
 
   // Limpar strings vazias
   const periodoInput = (args.periodo || '').trim();
+  const perguntaInput = (args.pergunta || '').trim();
   const dataInput = (args.data || '').trim();
   const dataInicioInput = (args.data_inicio || '').trim();
   const dataFimInput = (args.data_fim || '').trim();
 
-  const periodoDetectado = parsePeriodo(periodoInput || dataInput);
+  // 1. Tenta parsear o 'periodo' explícito (vindo da IA)
+  let periodoDetectado = periodoInput ? parsePeriodo(periodoInput) : null;
+
+  // 2. Se falhar, tenta parsear a 'pergunta' completa (contexto)
+  if (!periodoDetectado && perguntaInput) {
+    periodoDetectado = parsePeriodo(perguntaInput);
+  }
+
+  // 3. Se falhar, tenta parsear 'data'
+  if (!periodoDetectado && dataInput) {
+    periodoDetectado = parsePeriodo(dataInput);
+  }
 
   if (periodoDetectado) {
     dataInicio = periodoDetectado.data_inicio;
@@ -44,10 +56,6 @@ export async function espelhoBancario(
     dataInicio = normalizaData(dataInicioInput);
     dataFim = normalizaData(dataFimInput);
     periodoLabel = `${isoParaBR(dataInicio)} a ${isoParaBR(dataFim)}`;
-  } else if (dataInput) {
-    dataInicio = normalizaData(dataInput);
-    dataFim = dataInicio;
-    periodoLabel = isoParaBR(dataInicio);
   } else {
     // Se o usuário tentou passar um período mas não entendemos, ERRO (não inventar "hoje")
     if (periodoInput && periodoInput !== '') {
