@@ -181,12 +181,12 @@
     {
       "parameters": {
         "name": "consultar_pedidos",
-        "description": "Busca pedidos por período. Retorna total de pedidos, valor total e lista de pedidos. Suporta filtros por cliente, status e data.",
-        "jsCode": "// Pegar o período de onde a OpenAI realmente envia\nconst query = $input.item.json.query || {};\nconst periodo = query.some_input || query.periodo || $fromAI('periodo', 'hoje', 'string');\nconst cliente = query.cliente || $fromAI('cliente', '', 'string');\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo, cliente }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
+        "description": "Busca pedidos por período. Repasse a pergunta do usuário completa.",
+        "jsCode": "// Pegar a pergunta original do usuário\nconst pergunta = $fromAI('pergunta', '', 'string') || $input.item.json.pergunta || 'hoje';\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/consultar_pedidos',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo: pergunta, cliente: '' }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
         "specifyOutputSchema": true,
         "outputSchemaJson": "{\n  \"type\": \"string\",\n  \"description\": \"Relatório formatado dos pedidos\"\n}",
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'ontem', 'semana passada', etc.\"\n    },\n    \"cliente\": {\n      \"type\": \"string\",\n      \"description\": \"Nome do cliente (opcional)\"\n    }\n  },\n  \"required\": [\"periodo\"]\n}"
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"pergunta\": {\n      \"type\": \"string\",\n      \"description\": \"A pergunta completa do usuário\"\n    }\n  },\n  \"required\": [\"pergunta\"]\n}"
       },
       "id": "117f8434-0c07-44c2-af51-c6247d86cc08",
       "name": "📋 Tool: Consultar Pedidos",
@@ -200,10 +200,10 @@
     {
       "parameters": {
         "name": "espelho_bancario",
-        "description": "Consulta recebimentos PIX, cartão e dinheiro do espelho bancário. Retorna total recebido, saldo e detalhes por via de pagamento.",
-        "jsCode": "// Pegar o período de onde a OpenAI realmente envia\nconst query = $input.item.json.query || {};\nconst periodo = query.some_input || query.periodo || $fromAI('periodo', 'hoje', 'string');\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
+        "description": "Consulta recebimentos (PIX/cartão/dinheiro). Repasse a pergunta do usuário completa.",
+        "jsCode": "// Pegar a pergunta original do usuário\nconst pergunta = $fromAI('pergunta', '', 'string') || $input.item.json.pergunta || 'hoje';\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://gestorconecta-mcp-gateway.oxlser.easypanel.host/mcp/crm/espelho_bancario',\n  headers: { \n    'Content-Type': 'application/json',\n    'X-API-Key': 'camaleao-mcp-key-2025'\n  },\n  body: { periodo: pergunta }\n});\n\nif (response.success && response.data && response.data.mensagem) {\n  return response.data.mensagem;\n}\nreturn JSON.stringify(response);",
         "specifyInputSchema": true,
-        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"periodo\": {\n      \"type\": \"string\",\n      \"description\": \"Período natural: 'hoje', 'ontem', 'semana passada', etc.\"\n    }\n  },\n  \"required\": [\"periodo\"]\n}",
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"pergunta\": {\n      \"type\": \"string\",\n      \"description\": \"A pergunta completa do usuário\"\n    }\n  },\n  \"required\": [\"pergunta\"]\n}",
         "specifyOutputSchema": true,
         "outputSchemaJson": "{\n  \"type\": \"string\",\n  \"description\": \"Relatório formatado dos recebimentos\"\n}"
       },

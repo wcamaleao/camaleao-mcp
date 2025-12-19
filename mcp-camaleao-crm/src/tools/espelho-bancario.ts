@@ -19,7 +19,7 @@ interface EntriesBankMirrorResponse {
 
 export async function espelhoBancario(
   client: GraphQLClient,
-  args: { data?: string; data_inicio?: string; data_fim?: string; periodo?: string }
+  args: { data?: string; data_inicio?: string; data_fim?: string; periodo?: string; cliente?: string }
 ): Promise<EspelhoBancarioResult> {
   await client.ensureAuthenticated();
 
@@ -71,7 +71,7 @@ export async function espelhoBancario(
 
   // Executar com timeout
   const resultado = await Promise.race([
-    executarConsulta(client, dataInicio, dataFim, periodoLabel),
+    executarConsulta(client, dataInicio, dataFim, periodoLabel, args.cliente || ''),
     new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error('Timeout: consulta demorou mais de 45s')),
@@ -87,7 +87,8 @@ async function executarConsulta(
   client: GraphQLClient,
   dataInicio: string,
   dataFim: string,
-  periodoLabel: string
+  periodoLabel: string,
+  clienteFiltro: string
 ): Promise<EspelhoBancarioResult> {
   let allEntries: BankMirrorEntry[] = [];
   let currentPage = 1;
